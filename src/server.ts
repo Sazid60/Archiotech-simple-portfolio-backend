@@ -5,7 +5,6 @@ import cors from "cors";
 import authRoutes from "./routes/authRoutes";
 
 import { seedAdmin } from "./utils/seedAdmin";
-import { initDb } from "./utils/initDb";
 import workRoutes from "./routes/workRoutes";
 
 dotenv.config();
