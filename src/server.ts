@@ -34,8 +34,8 @@ seedAdmin().catch((err: any) => {
     console.error("seedAdmin failed:", {
         message: err?.message || "Unknown error",
         code: err?.code,
-        host: process.env.MYSQLHOST,
-        port: process.env.MYSQLPORT || 3306,
+        host: process.env.DB_HOST,
+        port: process.env.DB_PORT || 3306,
     });
 });
 
