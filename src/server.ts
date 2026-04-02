@@ -5,6 +5,7 @@ import cors from "cors";
 import authRoutes from "./routes/authRoutes";
 
 import { seedAdmin } from "./utils/seedAdmin";
+import { initDb } from "./utils/initDb";
 import workRoutes from "./routes/workRoutes";
 
 dotenv.config();
@@ -30,14 +31,19 @@ app.get("/", (_req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/works", workRoutes);
 
-seedAdmin().catch((err: any) => {
-    console.error("seedAdmin failed:", {
-        message: err?.message || "Unknown error",
-        code: err?.code,
-        host: process.env.DB_HOST,
-        port: process.env.DB_PORT || 3306,
-    });
-});
-
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+(async () => {
+    try {
+        await initDb();
+        await seedAdmin();
+        app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    } catch (err: any) {
+        console.error("Startup initialization failed:", {
+            message: err?.message || "Unknown error",
+            code: err?.code,
+        });
+        // Continue anyway; app can still serve requests even if DB init failed
+        app.listen(PORT, () => console.log(`Server running on port ${PORT} (DB init failed)`));
+    }
+})();
