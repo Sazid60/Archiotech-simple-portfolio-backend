@@ -6,6 +6,7 @@ import authRoutes from "./routes/authRoutes";
 
 import { seedAdmin } from "./utils/seedAdmin";
 import workRoutes from "./routes/workRoutes";
+import { db } from "./config/db";
 
 dotenv.config();
 const app = express();
@@ -30,8 +31,31 @@ app.get("/", (_req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/works", workRoutes);
 
+const requiredDbVars = ["DB_HOST", "DB_USER", "DB_PASSWORD", "DB_NAME"];
 
-seedAdmin();
+const getMissingDbVars = () => {
+    return requiredDbVars.filter((key) => !process.env[key]);
+};
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const startServer = async () => {
+    const missingVars = getMissingDbVars();
+    if (missingVars.length > 0) {
+        throw new Error(`Missing DB environment variables: ${missingVars.join(", ")}`);
+    }
+
+    await db.query("SELECT 1");
+    await seedAdmin();
+
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+};
+
+startServer().catch((err: any) => {
+    console.error("Startup failed:", {
+        message: err?.message || "Unknown error",
+        code: err?.code,
+        host: process.env.DB_HOST,
+        port: process.env.DB_PORT || 3306,
+    });
+    process.exit(1);
+});
