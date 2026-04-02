@@ -30,8 +30,14 @@ app.get("/", (_req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/works", workRoutes);
 
-
-seedAdmin();
+seedAdmin().catch((err: any) => {
+    console.error("seedAdmin failed:", {
+        message: err?.message || "Unknown error",
+        code: err?.code,
+        host: process.env.MYSQLHOST,
+        port: process.env.MYSQLPORT || 3306,
+    });
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
