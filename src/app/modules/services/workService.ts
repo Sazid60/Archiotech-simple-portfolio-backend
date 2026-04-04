@@ -10,7 +10,7 @@ import {
     deleteImageFromCloudinary,
     safeDeleteImageFromCloudinary,
     uploadBufferToCloudinary,
-} from "../config/cloudinary.config";
+} from "../../config/cloudinary.config";
 
 export const fetchWorksService = async () => getAllWorks();
 

@@ -2,11 +2,11 @@ import express from "express";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import cors from "cors";
-import authRoutes from "./routes/authRoutes";
-import workRoutes from "./routes/workRoutes";
-import { apiLimiter } from "./middlewares/rateLimiter";
-import globalErrorHandler from "./middlewares/globalErrorHandler";
-import notFound from "./middlewares/notFound";
+import authRoutes from "./app/modules/routes/authRoutes";
+import workRoutes from "./app/modules/routes/workRoutes";
+import { apiLimiter } from "./app/middlewares/rateLimiter";
+import globalErrorHandler from "./app/middlewares/globalErrorHandler";
+import notFound from "./app/middlewares/notFound";
 
 
 dotenv.config();

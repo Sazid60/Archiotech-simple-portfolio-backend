@@ -12,8 +12,9 @@ import {
     parseCreateWorkData,
     parseUpdateWorkData,
 } from "../validations/requestSchemas";
-import { catchAsync } from "../shared/catchAsync";
-import { sendResponse } from "../shared/sendResponse";
+import { catchAsync } from "../../shared/catchAsync";
+import { sendResponse } from "../../shared/sendResponse";
+
 
 export const fetchWorksController = catchAsync(async (req: Request, res: Response) => {
     const works = await fetchWorksService();

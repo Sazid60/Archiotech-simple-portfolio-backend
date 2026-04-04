@@ -1,5 +1,6 @@
-import { db } from "../config/db";
+import { db } from "../../config/db";
 import { User } from "../interfaces/user.interface";
+
 
 
 export const findUserByEmail = async (email: string): Promise<User | null> => {

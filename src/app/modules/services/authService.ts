@@ -1,8 +1,8 @@
 import bcrypt from "bcrypt";
 import dotenv from "dotenv";
 import { findUserByEmail } from "../models/user.model";
-import ApiError from "../errors/ApiError";
-import { createUserToken } from "../utils/userToken";
+import ApiError from "../../errors/ApiError";
+import { createUserToken } from "../../utils/userToken";
 
 dotenv.config();
 

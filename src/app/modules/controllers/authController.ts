@@ -1,9 +1,10 @@
 import { Request, Response } from "express";
 import httpStatus from "http-status";
 import { loginService } from "../services/authService";
+import { catchAsync } from "../../shared/catchAsync";
+import { setTokenResponse } from "../../utils/setToken";
 
-import { setTokenResponse } from "../utils/setToken";
-import { catchAsync } from "../shared/catchAsync";
+
 
 export const loginController = catchAsync(async (req: Request, res: Response) => {
   const { email, password } = req.body;

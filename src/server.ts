@@ -1,8 +1,8 @@
 import { Server } from "http";
 import dotenv from "dotenv";
 import app from "./app";
-import { seedAdmin } from "./utils/seedAdmin";
-import { initDb } from "./utils/initDb";
+import { seedAdmin } from "./app/utils/seedAdmin";
+import { initDb } from "./app/utils/initDb";
 
 dotenv.config();
 

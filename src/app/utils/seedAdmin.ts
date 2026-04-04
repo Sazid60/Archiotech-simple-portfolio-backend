@@ -1,7 +1,8 @@
 
 import bcrypt from "bcrypt";
 import dotenv from "dotenv";
-import { createUser, findUserByEmail } from "../models/user.model";
+import { createUser, findUserByEmail } from "../modules/models/user.model";
+
 dotenv.config();
 
 export const seedAdmin = async () => {

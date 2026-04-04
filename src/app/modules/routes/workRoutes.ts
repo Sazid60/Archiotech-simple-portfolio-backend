@@ -1,10 +1,10 @@
 import express from "express";
 
-import { auth } from "../middlewares/auth";
+import { auth } from "../../middlewares/auth";
 import { deleteWorkController, fetchWorksController, updateWorkController, uploadWorkController } from "../controllers/workController";
-import validateRequest from "../middlewares/validateRequest";
+import validateRequest from "../../middlewares/validateRequest";
 import { createWorkRequestSchema, updateWorkRequestSchema } from "../validations/requestSchemas";
-import upload from "../config/multer.config";
+import upload from "../../config/multer.config";
 
 
 
