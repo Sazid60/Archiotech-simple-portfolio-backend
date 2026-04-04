@@ -1,83 +1,6 @@
-// import { Request, Response } from "express";
-// import { deleteWorksService, fetchWorksService, updateWorkService, uploadWorkService } from "../services/workService";
-// import { idSchema, parseWorkData } from "../validations/requestSchemas";
-
-
-// export const fetchWorksController = async (req: Request, res: Response) => {
-//     const works = await fetchWorksService();
-//     res.status(200).json(works);
-// };
-
-// export const uploadWorkController = async (req: any, res: Response) => {
-//     if (!req.file) return res.status(400).json({ message: "No file uploaded" });
-
-//     try {
-//         const parsed = parseWorkData(req.body.data);
-
-//         console.log(parsed)
-
-//         const work = await uploadWorkService(req.file.buffer, parsed.title, parsed.subtitle, parsed.description);
-//         res.status(201).json({ message: "Work uploaded", work });
-//     } catch (error: any) {
-//         if (error?.name === "SyntaxError") {
-//             return res.status(400).json({ message: "Invalid JSON in data field" });
-//         }
-
-//         if (error?.name === "ZodError") {
-//             return res.status(400).json({ message: "Invalid work payload", issues: error.issues });
-//         }
-
-//         res.status(500).json({ message: "Internal server error" });
-//     }
-// };
-
-// export const updateWorkController = async (req: any, res: Response) => {
-//     if (!req.file) return res.status(400).json({ message: "No file uploaded" });
-
-//     try {
-//         const { id } = idSchema.parse(req.params);
-//         const parsed = parseWorkData(req.body.data);
-
-//         console.log(parsed)
-
-//         const updated = await updateWorkService(id, req.file.buffer, parsed.title, parsed.subtitle, parsed.description);
-//         res.status(200).json({ message: "Work updated", updated });
-//     } catch (error: any) {
-//         if (error?.name === "SyntaxError") {
-//             return res.status(400).json({ message: "Invalid JSON in data field" });
-//         }
-
-//         if (error?.name === "ZodError") {
-//             return res.status(400).json({ message: "Invalid work payload", issues: error.issues });
-//         }
-
-//         if (error?.message === "Work not found") {
-//             return res.status(404).json({ message: error.message });
-//         }
-
-//         res.status(500).json({ message: "Internal server error" });
-//     }
-// };
-
-// export const deleteWorkController = async (req: Request, res: Response) => {
-//     try {
-//         const { id } = idSchema.parse(req.params);
-//         await deleteWorksService(id);
-//         res.status(200).json({ message: "Work deleted" });
-//     } catch (error: any) {
-//         if (error?.name === "ZodError") {
-//             return res.status(400).json({ message: "Invalid work id", issues: error.issues });
-//         }
-
-//         if (error?.message === "Work not found") {
-//             return res.status(404).json({ message: error.message });
-//         }
-
-//         res.status(500).json({ message: "Internal server error" });
-//     }
-// };
 
 import { Request, Response } from "express";
+import httpStatus from "http-status";
 import {
     deleteWorksService,
     fetchWorksService,
@@ -89,85 +12,69 @@ import {
     parseCreateWorkData,
     parseUpdateWorkData,
 } from "../validations/requestSchemas";
+import { catchAsync } from "../shared/catchAsync";
+import { sendResponse } from "../shared/sendResponse";
 
-export const fetchWorksController = async (req: Request, res: Response) => {
+export const fetchWorksController = catchAsync(async (req: Request, res: Response) => {
     const works = await fetchWorksService();
-    res.status(200).json(works);
-};
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Works fetched successfully",
+        data: works,
+    });
+});
 
-export const uploadWorkController = async (req: any, res: Response) => {
+export const uploadWorkController = catchAsync(async (req: Request, res: Response) => {
     if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
+        res.status(httpStatus.BAD_REQUEST).json({ message: "No file uploaded" });
+        return;
     }
+    const parsed = parseCreateWorkData(req.body.data);
 
-    try {
-        const parsed = parseCreateWorkData(req.body.data);
+    const work = await uploadWorkService(
+        req.file.buffer,
+        parsed.title,
+        parsed.subtitle,
+        parsed.description
+    );
 
-        const work = await uploadWorkService(
-            req.file.buffer,
-            parsed.title,
-            parsed.subtitle,
-            parsed.description
-        );
-        res.status(201).json({ message: "Work uploaded", work });
-    } catch (error: any) {
-        if (error?.name === "SyntaxError") {
-            return res.status(400).json({ message: "Invalid JSON in data field" });
-        }
+    sendResponse(res, {
+        statusCode: httpStatus.CREATED,
+        success: true,
+        message: "Work uploaded",
+        data: work,
+    });
+});
 
-        if (error?.name === "ZodError") {
-            return res.status(400).json({ message: "Invalid work payload", issues: error.issues });
-        }
+export const updateWorkController = catchAsync(async (req: any, res: Response) => {
+    const { id } = idSchema.parse(req.params);
+    const parsed = parseUpdateWorkData(req.body.data);
 
-        res.status(500).json({ message: "Internal server error" });
-    }
-};
+    const updated = await updateWorkService(
+        id,
+        req.file?.buffer,
+        parsed.title,
+        parsed.subtitle,
+        parsed.description
+    );
 
-export const updateWorkController = async (req: any, res: Response) => {
-    try {
-        const { id } = idSchema.parse(req.params);
-        const parsed = parseUpdateWorkData(req.body.data);
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Work updated",
+        data: updated,
+    });
+});
 
-        const updated = await updateWorkService(
-            id,
-            req.file?.buffer,
-            parsed.title,
-            parsed.subtitle,
-            parsed.description
-        );
+export const deleteWorkController = catchAsync(async (req: Request, res: Response) => {
+    const { id } = idSchema.parse(req.params);
+    await deleteWorksService(id);
 
-        res.status(200).json({ message: "Work updated", updated });
-    } catch (error: any) {
-        if (error?.name === "SyntaxError") {
-            return res.status(400).json({ message: "Invalid JSON in data field" });
-        }
-
-        if (error?.name === "ZodError") {
-            return res.status(400).json({ message: "Invalid work payload", issues: error.issues });
-        }
-
-        if (error?.message === "Work not found") {
-            return res.status(404).json({ message: error.message });
-        }
-
-        res.status(500).json({ message: "Internal server error" });
-    }
-};
-
-export const deleteWorkController = async (req: Request, res: Response) => {
-    try {
-        const { id } = idSchema.parse(req.params);
-        await deleteWorksService(id);
-        res.status(200).json({ message: "Work deleted" });
-    } catch (error: any) {
-        if (error?.name === "ZodError") {
-            return res.status(400).json({ message: "Invalid work id", issues: error.issues });
-        }
-
-        if (error?.message === "Work not found") {
-            return res.status(404).json({ message: error.message });
-        }
-
-        res.status(500).json({ message: "Internal server error" });
-    }
-};
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Work deleted",
+        data: null,
+    });
+});

@@ -1,45 +1,4 @@
-// import { v2 as cloudinary } from "cloudinary";
-// import streamifier from "streamifier";
 
-// import dotenv from "dotenv";
-// import { createWorks, deleteWorks, getAllWorks, updateWorks } from "../models/works.model";
-// dotenv.config();
-
-// cloudinary.config({
-//   cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
-//   api_key: process.env.CLOUDINARY_API_KEY!,
-//   api_secret: process.env.CLOUDINARY_API_SECRET!
-// });
-
-// export const fetchWorksService = async () => getAllWorks();
-
-// export const uploadWorkService = async (fileBuffer: Buffer, title: string, subtitle: string, description: string) => {
-//   const result: any = await new Promise((resolve, reject) => {
-//     const uploadStream = cloudinary.uploader.upload_stream({ folder: "works" }, (error, result) => {
-//       if (error) reject(error);
-//       else resolve(result);
-//     });
-//     streamifier.createReadStream(fileBuffer).pipe(uploadStream);
-//   });
-//   return createWorks(result.secure_url, title, subtitle, description);
-// };
-
-// export const updateWorkService = async (id: number, fileBuffer: Buffer, title: string, subtitle: string, description: string) => {
-//   const result: any = await new Promise((resolve, reject) => {
-//     const uploadStream = cloudinary.uploader.upload_stream({ folder: "works" }, (error, result) => {
-//       if (error) reject(error);
-//       else resolve(result);
-//     });
-//     streamifier.createReadStream(fileBuffer).pipe(uploadStream);
-//   });
-//   return updateWorks(id, result.secure_url, title, subtitle, description);
-// };
-
-// export const deleteWorksService = async (id: number) => deleteWorks(id);
-
-import { v2 as cloudinary } from "cloudinary";
-import streamifier from "streamifier";
-import dotenv from "dotenv";
 import {
     createWorks,
     deleteWorks,
@@ -47,14 +6,11 @@ import {
     getWorkById,
     updateWorks,
 } from "../models/works.model";
-
-dotenv.config();
-
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
-    api_key: process.env.CLOUDINARY_API_KEY!,
-    api_secret: process.env.CLOUDINARY_API_SECRET!,
-});
+import {
+    deleteImageFromCloudinary,
+    safeDeleteImageFromCloudinary,
+    uploadBufferToCloudinary,
+} from "../config/cloudinary.config";
 
 export const fetchWorksService = async () => getAllWorks();
 
@@ -64,16 +20,8 @@ export const uploadWorkService = async (
     subtitle: string,
     description: string
 ) => {
-    const result: any = await new Promise((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-            { folder: "works" },
-            (error, result) => {
-                if (error) reject(error);
-                else resolve(result);
-            }
-        );
-        streamifier.createReadStream(fileBuffer).pipe(uploadStream);
-    });
+    const result = await uploadBufferToCloudinary(fileBuffer, "works");
+
     return createWorks(result.secure_url, title, subtitle, description);
 };
 
@@ -84,23 +32,43 @@ export const updateWorkService = async (
     subtitle: string | undefined,
     description: string | undefined
 ) => {
-    let imageUrl: string | undefined;
-
-    if (fileBuffer) {
-        const result: any = await new Promise((resolve, reject) => {
-            const uploadStream = cloudinary.uploader.upload_stream(
-                { folder: "works" },
-                (error, result) => {
-                    if (error) reject(error);
-                    else resolve(result);
-                }
-            );
-            streamifier.createReadStream(fileBuffer).pipe(uploadStream);
-        });
-        imageUrl = result.secure_url;
+    const existing = await getWorkById(id);
+    if (!existing) {
+        throw new Error("Work not found");
     }
 
-    return updateWorks(id, imageUrl, title, subtitle, description);
+    let imageUrl: string | undefined;
+    let uploadedImageUrl: string | undefined;
+
+    if (fileBuffer) {
+        const result = await uploadBufferToCloudinary(fileBuffer, "works");
+        imageUrl = result.secure_url;
+        uploadedImageUrl = result.secure_url;
+    }
+
+    try {
+        const updated = await updateWorks(id, imageUrl, title, subtitle, description);
+
+        if (uploadedImageUrl) {
+            await deleteImageFromCloudinary(existing.image_url);
+        }
+
+        return updated;
+    } catch (err) {
+        if (uploadedImageUrl) {
+            await safeDeleteImageFromCloudinary(uploadedImageUrl);
+        }
+
+        throw err;
+    }
 };
 
-export const deleteWorksService = async (id: number) => deleteWorks(id);
+export const deleteWorksService = async (id: number) => {
+    const existing = await getWorkById(id);
+    if (!existing) {
+        throw new Error("Work not found");
+    }
+
+    await deleteWorks(id);
+    await deleteImageFromCloudinary(existing.image_url);
+};

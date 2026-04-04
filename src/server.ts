@@ -1,58 +1,73 @@
-import express from "express";
+import { Server } from "http";
 import dotenv from "dotenv";
-import cookieParser from "cookie-parser";
-import cors from "cors";
-import authRoutes from "./routes/authRoutes";
-
+import app from "./app";
 import { seedAdmin } from "./utils/seedAdmin";
 import { initDb } from "./utils/initDb";
-import workRoutes from "./routes/workRoutes";
 
 dotenv.config();
-const app = express();
-
-const corsOrigins = (process.env.CORS_ORIGIN || "")
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-
-const corsCredentials = process.env.CORS_CREDENTIALS === "true";
-
-app.use(cors({
-    origin: corsOrigins.length > 0 ? corsOrigins : true,
-    credentials: corsCredentials,
-}));
-
-app.use(express.json());
-app.use(cookieParser());
-app.get("/", (_req, res) => {
-    res.json({ message: "API is running" });
-});
-app.use("/api/auth", authRoutes);
-app.use("/api/works", workRoutes);
 
 const start = async () => {
+    let server: Server;
+
     try {
-        await initDb();
-        await seedAdmin();
+        try {
+            await initDb();
+            await seedAdmin();
+        } catch (err: any) {
+            console.error("Startup initialization failed:", {
+                message: err?.message || "Unknown error",
+                code: err?.code,
+                host: process.env.DB_HOST,
+                port: process.env.DB_PORT || 3306,
+            });
+        }
+
+        const PORT = process.env.PORT || 5000;
+        server = app.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+        });
+
+        const exitHandler = () => {
+            if (server) {
+                server.close(() => {
+                    console.log("Server closed gracefully.");
+                    process.exit(1);
+                });
+            } else {
+                process.exit(1);
+            }
+        };
+
+        process.on("unhandledRejection", (error) => {
+            console.log("Unhandled Rejection is detected, we are closing our server...");
+            console.log(error);
+            exitHandler();
+        });
+
+        process.on("uncaughtException", (error) => {
+            console.log("Uncaught Exception detected, closing server...");
+            console.error(error);
+            exitHandler();
+        });
+
+        process.on("SIGTERM", () => {
+            console.log("SIGTERM received, shutting down gracefully...");
+            exitHandler();
+        });
+
+        process.on("SIGINT", () => {
+            console.log("SIGINT (Ctrl+C) received, shutting down gracefully...");
+            exitHandler();
+        });
     } catch (err: any) {
-        console.error("Startup initialization failed:", {
+        console.error("Startup failed:", {
             message: err?.message || "Unknown error",
             code: err?.code,
             host: process.env.DB_HOST,
             port: process.env.DB_PORT || 3306,
         });
+        process.exit(1);
     }
-
-    const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 };
 
-start().catch((err: any) => {
-    console.error("Startup failed:", {
-        message: err?.message || "Unknown error",
-        code: err?.code,
-        host: process.env.DB_HOST,
-        port: process.env.DB_PORT || 3306,
-    });
-});
+start();
