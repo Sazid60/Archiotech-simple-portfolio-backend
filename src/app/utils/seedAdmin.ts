@@ -1,17 +1,11 @@
 
 import bcrypt from "bcrypt";
-import dotenv from "dotenv";
 import { createUser, findUserByEmail } from "../modules/models/user.model";
-
-dotenv.config();
+import { env } from "../config/env";
 
 export const seedAdmin = async () => {
-  const adminEmail = process.env.ADMIN_EMAIL;
-  const adminPassword = process.env.ADMIN_PASSWORD;
-
-  if (!adminEmail || !adminPassword) {
-    throw new Error("ADMIN_EMAIL and ADMIN_PASSWORD are required");
-  }
+  const adminEmail = env.ADMIN_EMAIL;
+  const adminPassword = env.ADMIN_PASSWORD;
 
   const existing = await findUserByEmail(adminEmail);
 

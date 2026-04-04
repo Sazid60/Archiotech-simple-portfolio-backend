@@ -1,10 +1,8 @@
 import { Server } from "http";
-import dotenv from "dotenv";
 import app from "./app";
 import { seedAdmin } from "./app/utils/seedAdmin";
 import { initDb } from "./app/utils/initDb";
-
-dotenv.config();
+import { env } from "./app/config/env";
 
 const start = async () => {
     let server: Server;
@@ -13,7 +11,7 @@ const start = async () => {
         await initDb();
         await seedAdmin();
 
-        const PORT = process.env.PORT || 5000;
+        const PORT = env.PORT;
         server = app.listen(PORT, () => {
             console.log(`Server running on port ${PORT}`);
         });

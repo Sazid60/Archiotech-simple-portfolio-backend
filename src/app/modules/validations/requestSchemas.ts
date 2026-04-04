@@ -39,14 +39,17 @@ export const updateWorkRequestSchema = z.object({
     data: workBodySchema.shape.data,
 });
 
-export const parseCreateWorkData = (data: unknown) => {
+const parseWorkData = <T extends z.ZodTypeAny>(schema: T, data: unknown): z.infer<T> => {
     const parsedData = typeof data === "string" ? JSON.parse(data) : data;
-    return createWorkSchema.parse(parsedData);
+    return schema.parse(parsedData);
+};
+
+export const parseCreateWorkData = (data: unknown) => {
+    return parseWorkData(createWorkSchema, data);
 };
 
 export const parseUpdateWorkData = (data: unknown) => {
-    const parsedData = typeof data === "string" ? JSON.parse(data) : data;
-    return updateWorkSchema.parse(parsedData);
+    return parseWorkData(updateWorkSchema, data);
 };
 
 export const idSchema = z.object({

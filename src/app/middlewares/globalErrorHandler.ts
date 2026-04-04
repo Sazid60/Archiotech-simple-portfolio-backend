@@ -3,6 +3,7 @@
 import type { NextFunction, Request, Response } from "express";
 import httpStatus from "http-status";
 import { ZodError } from "zod";
+import { env } from "../config/env";
 
 
 const globalErrorHandler = (
@@ -11,7 +12,7 @@ const globalErrorHandler = (
   res: Response,
   next: NextFunction
 ) => {
-  const isDevelopment = process.env.NODE_ENV === "development";
+  const isDevelopment = env.NODE_ENV === "development";
   console.error(err);
 
   let statusCode: number = err.statusCode || httpStatus.INTERNAL_SERVER_ERROR;

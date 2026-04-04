@@ -1,5 +1,4 @@
 import express from "express";
-import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import authRoutes from "./app/modules/routes/authRoutes";
@@ -7,20 +6,18 @@ import workRoutes from "./app/modules/routes/workRoutes";
 import { apiLimiter } from "./app/middlewares/rateLimiter";
 import globalErrorHandler from "./app/middlewares/globalErrorHandler";
 import notFound from "./app/middlewares/notFound";
-
-
-dotenv.config();
+import { env } from "./app/config/env";
 
 const app = express();
 
-const corsOrigins = (process.env.CORS_ORIGIN || "")
+const corsOrigins = env.CORS_ORIGIN
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-const corsCredentials = process.env.CORS_CREDENTIALS === "true";
+const corsCredentials = env.CORS_CREDENTIALS === "true";
 const corsOriginConfig =
-  corsOrigins.length > 0 ? corsOrigins : process.env.NODE_ENV === "production" ? false : true;
+  corsOrigins.length > 0 ? corsOrigins : env.NODE_ENV === "production" ? false : true;
 
 app.set("trust proxy", 1);
 app.use(

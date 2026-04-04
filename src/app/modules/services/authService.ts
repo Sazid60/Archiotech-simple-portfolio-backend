@@ -1,11 +1,8 @@
 import bcrypt from "bcrypt";
-import dotenv from "dotenv";
 import { findUserByEmail } from "../models/user.model";
 import ApiError from "../../errors/ApiError";
 import { createUserToken } from "../../utils/userToken";
 import httpStatus from "http-status";
-
-dotenv.config();
 
 export const loginService = async (email: string, password: string): Promise<string> => {
   const user = await findUserByEmail(email);

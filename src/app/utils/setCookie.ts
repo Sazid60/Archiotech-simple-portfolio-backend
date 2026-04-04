@@ -1,7 +1,8 @@
 import { Response } from "express";
+import { env } from "../config/env";
 
 export const setAuthCookie = (res: Response, token: string) => {
-  const isProduction = process.env.NODE_ENV === "production";
+  const isProduction = env.NODE_ENV === "production";
 
   res.cookie("token", token, {
     httpOnly: true,

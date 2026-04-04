@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import httpStatus from "http-status";
 import ApiError from "../errors/ApiError";
+import { env } from "../config/env";
 
 type JwtPayload = {
     id: number;
@@ -19,13 +20,8 @@ export const auth = (roles: string[] = []) => {
             return next(new ApiError(httpStatus.UNAUTHORIZED, "No token provided"));
         }
 
-        const jwtSecret = process.env.JWT_SECRET;
-        if (!jwtSecret) {
-            return next(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "JWT secret is not configured"));
-        }
-
         try {
-            const decoded = jwt.verify(token, jwtSecret) as JwtPayload;
+            const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
             req.user = decoded;
             const role = decoded.role ?? "";
 
