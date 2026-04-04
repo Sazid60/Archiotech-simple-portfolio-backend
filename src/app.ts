@@ -19,11 +19,13 @@ const corsOrigins = (process.env.CORS_ORIGIN || "")
   .filter(Boolean);
 
 const corsCredentials = process.env.CORS_CREDENTIALS === "true";
+const corsOriginConfig =
+  corsOrigins.length > 0 ? corsOrigins : process.env.NODE_ENV === "production" ? false : true;
 
 app.set("trust proxy", 1);
 app.use(
   cors({
-    origin: corsOrigins.length > 0 ? corsOrigins : true,
+    origin: corsOriginConfig,
     credentials: corsCredentials,
   })
 );

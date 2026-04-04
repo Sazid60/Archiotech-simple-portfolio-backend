@@ -14,10 +14,24 @@ type CounterState = {
 
 const createRateLimiter = (options: LimiterOptions) => {
   const store = new Map<string, CounterState>();
+  let requestCounter = 0;
+
+  const cleanupStaleEntries = (now: number) => {
+    for (const [key, state] of store.entries()) {
+      if (now - state.startedAt > options.windowMs * 2) {
+        store.delete(key);
+      }
+    }
+  };
 
   return (req: Request, res: Response, next: NextFunction) => {
     const key = req.ip || req.socket.remoteAddress || "unknown";
     const now = Date.now();
+
+    requestCounter += 1;
+    if (requestCounter % 100 === 0) {
+      cleanupStaleEntries(now);
+    }
 
     const current = store.get(key);
     if (!current || now - current.startedAt > options.windowMs) {

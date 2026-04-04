@@ -84,10 +84,13 @@ export const deleteImageFromCloudinary = async (imageUrl?: string) => {
 export const safeDeleteImageFromCloudinary = async (imageUrl?: string) => {
 	try {
 		await deleteImageFromCloudinary(imageUrl);
-	} catch {
+	} catch (error) {
+		console.warn("Cloudinary safe delete failed", {
+			imageUrl,
+			error,
+		});
 	}
 };
 
-export const cloudinaryUpload = cloudinary;
 
 export default cloudinary;

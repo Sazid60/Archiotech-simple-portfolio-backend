@@ -1,24 +1,41 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import httpStatus from "http-status";
+import ApiError from "../errors/ApiError";
+
+type JwtPayload = {
+    id: number;
+    role?: string;
+};
 
 export interface AuthRequest extends Request {
-    user?: any;
+    user?: JwtPayload;
 }
 
 export const auth = (roles: string[] = []) => {
     return (req: AuthRequest, res: Response, next: NextFunction) => {
         const token = req.cookies?.token ?? req.headers.authorization?.split(" ")[1];
-        if (!token) return res.status(401).json({ message: "No token provided" });
+        if (!token) {
+            return next(new ApiError(httpStatus.UNAUTHORIZED, "No token provided"));
+        }
+
+        const jwtSecret = process.env.JWT_SECRET;
+        if (!jwtSecret) {
+            return next(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "JWT secret is not configured"));
+        }
 
         try {
-            const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+            const decoded = jwt.verify(token, jwtSecret) as JwtPayload;
             req.user = decoded;
+            const role = decoded.role ?? "";
 
-            if (roles.length > 0 && !roles.includes(decoded.role)) return res.status(403).json({ message: "Forbidden" });
+            if (roles.length > 0 && !roles.includes(role)) {
+                return next(new ApiError(httpStatus.FORBIDDEN, "Forbidden"));
+            }
 
-            next();
+            return next();
         } catch {
-            res.status(401).json({ message: "Invalid token" });
+            return next(new ApiError(httpStatus.UNAUTHORIZED, "Invalid token"));
         }
     };
 };

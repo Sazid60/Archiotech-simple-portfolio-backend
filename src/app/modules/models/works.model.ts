@@ -1,17 +1,20 @@
 import { db } from "../../config/db";
+import ApiError from "../../errors/ApiError";
 import { Works } from "../interfaces/works.interface";
+import httpStatus from 'http-status';
+import { ResultSetHeader, RowDataPacket } from "mysql2";
 
 
 
 
 export const getAllWorks = async (): Promise<Works[]> => {
-    const [rows]: any = await db.query("SELECT * FROM works ORDER BY created_at DESC");
+    const [rows] = await db.query<(Works & RowDataPacket)[]>("SELECT * FROM works ORDER BY created_at DESC");
     return rows;
 };
 
 export const getWorkById = async (id: number): Promise<Works | null> => {
-    const [rows]: any = await db.query("SELECT * FROM works WHERE id = ?", [id]);
-    return rows.length > 0 ? rows[0] : null;
+    const [rows] = await db.query<(Works & RowDataPacket)[]>("SELECT * FROM works WHERE id = ?", [id]);
+    return rows[0] ?? null;
 };
 
 export const createWorks = async (
@@ -20,7 +23,7 @@ export const createWorks = async (
     subtitle: string,
     description: string
 ): Promise<Works> => {
-    const [result]: any = await db.query(
+    const [result] = await db.query<ResultSetHeader>(
         "INSERT INTO works (image_url, title, subtitle, description) VALUES (?, ?, ?, ?)",
         [imageUrl, title, subtitle, description]
     );
@@ -36,7 +39,7 @@ export const updateWorks = async (
 ): Promise<Works> => {
     const existing = await getWorkById(id);
     if (!existing) {
-        throw new Error("Work not found");
+        throw new ApiError(httpStatus.NOT_FOUND, "Work not found");
     }
 
     const nextImageUrl = imageUrl ?? existing.image_url;
@@ -44,13 +47,13 @@ export const updateWorks = async (
     const nextSubtitle = subtitle ?? existing.subtitle;
     const nextDescription = description ?? existing.description;
 
-    const [result]: any = await db.query(
+    const [result] = await db.query<ResultSetHeader>(
         "UPDATE works SET image_url = ?, title = ?, subtitle = ?, description = ? WHERE id = ?",
         [nextImageUrl, nextTitle, nextSubtitle, nextDescription, id]
     );
 
     if (result.affectedRows === 0) {
-        throw new Error("Work not found");
+        throw new ApiError(httpStatus.NOT_FOUND, "Work not found");
     }
 
     return {
@@ -63,9 +66,9 @@ export const updateWorks = async (
 };
 
 export const deleteWorks = async (id: number): Promise<void> => {
-    const [result]: any = await db.query("DELETE FROM works WHERE id = ?", [id]);
+    const [result] = await db.query<ResultSetHeader>("DELETE FROM works WHERE id = ?", [id]);
 
     if (result.affectedRows === 0) {
-        throw new Error("Work not found");
+        throw new ApiError(httpStatus.NOT_FOUND, "Work not found");
     }
 };

@@ -32,11 +32,11 @@ const workBodySchema = z.object({
 });
 
 export const createWorkRequestSchema = z.object({
-    body: workBodySchema,
+    data: workBodySchema.shape.data,
 });
 
 export const updateWorkRequestSchema = z.object({
-    body: workBodySchema,
+    data: workBodySchema.shape.data,
 });
 
 export const parseCreateWorkData = (data: unknown) => {

@@ -11,6 +11,8 @@ import {
     safeDeleteImageFromCloudinary,
     uploadBufferToCloudinary,
 } from "../../config/cloudinary.config";
+import ApiError from "../../errors/ApiError";
+import httpStatus from "http-status";
 
 export const fetchWorksService = async () => getAllWorks();
 
@@ -34,7 +36,7 @@ export const updateWorkService = async (
 ) => {
     const existing = await getWorkById(id);
     if (!existing) {
-        throw new Error("Work not found");
+        throw new ApiError(httpStatus.NOT_FOUND, "Work not found");
     }
 
     let imageUrl: string | undefined;
@@ -66,7 +68,7 @@ export const updateWorkService = async (
 export const deleteWorksService = async (id: number) => {
     const existing = await getWorkById(id);
     if (!existing) {
-        throw new Error("Work not found");
+        throw new ApiError(httpStatus.NOT_FOUND, "Work not found");
     }
 
     await deleteWorks(id);

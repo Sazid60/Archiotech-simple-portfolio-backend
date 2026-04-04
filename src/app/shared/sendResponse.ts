@@ -1,11 +1,5 @@
 import type { Response } from "express";
 
-interface TMeta {
-    page: number;
-    limit: number;
-    total: number
-}
-
 interface TResponse<T> {
     statusCode: number;
     success: boolean;
@@ -19,6 +13,6 @@ export const sendResponse = <T>(res: Response, data: TResponse<T>) => {
         statusCode: data.statusCode,
         success: data.success,
         message: data.message,
-        data: data.data || null || undefined
+        data: data.data ?? null
     })
 }

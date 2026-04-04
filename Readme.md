@@ -1,100 +1,82 @@
 # Archiotech Backend API
 
-Backend API for portfolio authentication and work management.
+Express + TypeScript backend for portfolio authentication and work management.
+
+## Overview
+
+This API provides:
+
+- Admin login with JWT
+- Token delivery in both cookie and JSON response
+- Role-based route protection for admin-only write operations
+- Portfolio works CRUD
+- Image upload to Cloudinary
+- Zod request validation
+- In-memory rate limiting
+- Automatic MySQL table initialization and admin seeding on startup
 
 ## Tech Stack
 
 - Node.js
 - TypeScript
-- Express
-- MySQL
+- Express 5
+- MySQL (mysql2)
 - Cloudinary
-- JWT (auth)
-- Zod (request validation)
-
-## Features
-
-- Admin login with JWT
-- JWT stored in httpOnly cookie
-- Protected admin routes with role guard
-- Portfolio work CRUD
-- Image upload to Cloudinary
-- Zod validation for request payloads
-- Admin auto-seeding on server start
+- JWT (jsonwebtoken)
+- Zod
+- Multer
 
 ## Project Structure
 
 ```text
 src/
-	config/
-		db.ts
-	controllers/
-		authController.ts
-		workController.ts
-	interfaces/
-		user.interface.ts
-		works.interface.ts
-	middlewares/
-		auth.ts
-	models/
-		user.model.ts
-		works.model.ts
-	routes/
-		authRoutes.ts
-		workRoutes.ts
-	services/
-		authService.ts
-		workService.ts
-	utils/
-		seedAdmin.ts
-	validations/
-		requestSchemas.ts
-	server.ts
+  app.ts
+  server.ts
+  app/
+    config/
+      cloudinary.config.ts
+      db.ts
+      multer.config.ts
+    errors/
+      ApiError.ts
+    middlewares/
+      auth.ts
+      globalErrorHandler.ts
+      notFound.ts
+      rateLimiter.ts
+      validateRequest.ts
+    modules/
+      controllers/
+        authController.ts
+        workController.ts
+      interfaces/
+        user.interface.ts
+        works.interface.ts
+      models/
+        user.model.ts
+        works.model.ts
+      routes/
+        authRoutes.ts
+        workRoutes.ts
+      services/
+        authService.ts
+        workService.ts
+      validations/
+        requestSchemas.ts
+    shared/
+      catchAsync.ts
+      sendResponse.ts
+    utils/
+      initDb.ts
+      seedAdmin.ts
+      setCookie.ts
+      setToken.ts
+      userToken.ts
 ```
 
-## Installed Packages
+## Environment Variables
 
-### Runtime Dependencies
-
-- bcrypt
-- cloudinary
-- cookie-parser
-- dotenv
-- express
-- jsonwebtoken
-- multer
-- mysql2
-- streamifier
-- zod
-
-### Development Dependencies
-
-- typescript
-- ts-node
-- ts-node-dev
-- @types/node
-- @types/express
-- @types/bcrypt
-- @types/jsonwebtoken
-- @types/multer
-- @types/streamifier
-- @types/cookie-parser
-
-## Prerequisites
-
-- Node.js 24 recommended
-- MySQL server running
-- Cloudinary account
-
-## Installation
-
-1. Install dependencies:
-
-```bash
-npm install
-```
-
-2. Create a `.env` file in the project root:
+Create a .env file in the project root:
 
 ```env
 PORT=5000
@@ -120,56 +102,52 @@ CORS_CREDENTIALS=true
 NODE_ENV=development
 ```
 
-3. Create required database tables:
+Notes:
 
-```sql
-CREATE TABLE users (
-	id INT AUTO_INCREMENT PRIMARY KEY,
-	email VARCHAR(255) NOT NULL UNIQUE,
-	password VARCHAR(255) NOT NULL,
-	role VARCHAR(50) NOT NULL DEFAULT 'admin'
-);
+- CORS_ORIGIN supports comma-separated origins.
+- CORS_CREDENTIALS must be true if you want browser cookie auth across origins.
+- JWT_SECRET is required for token creation/verification.
 
-CREATE TABLE works (
-	id INT AUTO_INCREMENT PRIMARY KEY,
-	image_url TEXT NOT NULL,
-	title VARCHAR(255) NOT NULL,
-	subtitle VARCHAR(255) NOT NULL,
-	description TEXT NOT NULL,
-	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+## Database Setup
+
+You do not need to manually create tables. On startup the app runs initDb() and creates tables if missing:
+
+- users
+- works
+
+It also runs seedAdmin() and inserts an admin user from ADMIN_EMAIL and ADMIN_PASSWORD if that admin does not already exist.
+
+## Installation
+
+```bash
+npm install
 ```
 
-4. Run in development:
+## Run
+
+Development:
 
 ```bash
 npm run dev
 ```
 
-5. Build and run production:
+Build:
 
 ```bash
 npm run build
+```
+
+Production (after build):
+
+```bash
 npm start
 ```
 
 ## Scripts
 
-- `npm run dev` -> start with ts-node
-- `npm run build` -> compile TypeScript to `dist`
-- `npm start` -> run compiled server from `dist/server.js`
-
-## Working Flow
-
-1. Server starts and loads environment variables.
-2. MySQL pool is used for all DB operations.
-3. `seedAdmin` checks `ADMIN_EMAIL` and creates admin user if missing.
-4. Login endpoint validates payload, verifies password, signs JWT.
-5. JWT is returned in response body and also set as httpOnly cookie.
-6. Protected routes read token from cookie or `Authorization: Bearer <token>`.
-7. For work create/update:
-   - image file is uploaded to Cloudinary
-   - Cloudinary URL is stored in MySQL.
+- npm run dev: runs ts-node src/server.ts
+- npm run build: compiles TypeScript with tsc
+- npm start: runs dist/server.js
 
 ## Base URL
 
@@ -177,13 +155,37 @@ npm start
 http://localhost:5000
 ```
 
+## Auth Behavior
+
+- Login returns a JWT in JSON response body: { token: "..." }
+- Login also sets an httpOnly cookie named token
+- Protected routes accept token from either:
+  - Cookie: token
+  - Authorization header: Bearer <token>
+- Token expiration is 1 hour
+
+Cookie options:
+
+- httpOnly: true
+- maxAge: 1 hour
+- secure: true only in production
+- sameSite: none in production, lax otherwise
+
+## Rate Limiting
+
+- Global API limiter:
+  - 1000 requests / 15 minutes / IP
+- Auth limiter on POST /api/auth/login:
+  - 59 attempts / 15 minutes / IP
+  - Successful auth responses reduce the count (skipSuccessfulRequests behavior)
+
 ## API Endpoints
 
 ### Health
 
-- `GET /`
+GET /
 
-Success response:
+Response:
 
 ```json
 {
@@ -193,9 +195,9 @@ Success response:
 
 ### Auth
 
-- `POST /api/auth/login`
+POST /api/auth/login
 
-Body (raw JSON):
+Body:
 
 ```json
 {
@@ -214,80 +216,154 @@ Success response:
 
 ### Works
 
-- `GET /api/works` (public)
-- `POST /api/works` (admin only)
-- `PUT /api/works/:id` (admin only)
-- `DELETE /api/works/:id` (admin only)
+GET /api/works (public)
 
-## Postman Inputs
-
-### 1) Login
-
-- Method: `POST`
-- URL: `http://localhost:5000/api/auth/login`
-- Body: raw -> JSON
+Success response:
 
 ```json
 {
-  "email": "admin@example.com",
-  "password": "admin123456"
+  "statusCode": 200,
+  "success": true,
+  "message": "Works fetched successfully",
+  "data": [
+    {
+      "id": 1,
+      "image_url": "https://...",
+      "title": "Project title",
+      "subtitle": "Project subtitle",
+      "description": "Project description",
+      "created_at": "2026-04-04T10:10:10.000Z"
+    }
+  ]
 }
 ```
 
-### 2) Get Works
+POST /api/works (admin only)
 
-- Method: `GET`
-- URL: `http://localhost:5000/api/works`
+- Content-Type: multipart/form-data
+- Required fields:
+  - image (file)
+  - data (stringified JSON)
 
-### 3) Upload Work
+Example data value:
 
-- Method: `POST`
-- URL: `http://localhost:5000/api/works`
-- Authorization:
-  - Use cookie from login automatically in Postman, or
-  - Add header: `Authorization: Bearer <token>`
-- Body: form-data
+```json
+{"title":"Project title","subtitle":"Project subtitle","description":"Project description"}
+```
 
-| Key   | Type | Value                                                                                       |
-| ----- | ---- | ------------------------------------------------------------------------------------------- |
-| data  | Text | {"title":"Project title","subtitle":"Project subtitle","description":"Project description"} |
-| image | File | Select image file                                                                           |
+Success response:
 
-### 4) Update Work
+```json
+{
+  "statusCode": 201,
+  "success": true,
+  "message": "Work uploaded",
+  "data": {
+    "id": 1,
+    "image_url": "https://...",
+    "title": "Project title",
+    "subtitle": "Project subtitle",
+    "description": "Project description"
+  }
+}
+```
 
-- Method: `PUT`
-- URL: `http://localhost:5000/api/works/1`
-- Authorization:
-  - Use cookie from login automatically in Postman, or
-  - Add header: `Authorization: Bearer <token>`
-- Body: form-data
+PUT /api/works/:id (admin only)
 
-| Key   | Type | Value                                                                                       |
-| ----- | ---- | ------------------------------------------------------------------------------------------- |
-| data  | Text | {"title":"Updated title","subtitle":"Updated subtitle","description":"Updated description"} |
-| image | File | Select image file                                                                           |
+- Content-Type: multipart/form-data
+- data is required (stringified JSON)
+- image is optional
+- data supports partial updates
 
-### 5) Delete Work
+Example data value:
 
-- Method: `DELETE`
-- URL: `http://localhost:5000/api/works/1`
-- Authorization:
-  - Use cookie from login automatically in Postman, or
-  - Add header: `Authorization: Bearer <token>`
+```json
+{"title":"Updated title"}
+```
 
-## Common Errors
+Success response:
 
-- `400 Invalid login payload`
-- `401 User not found / Incorrect password`
-- `401 No token provided / Invalid token`
-- `403 Forbidden`
-- `400 No file uploaded`
-- `400 Invalid JSON in data field`
-- `400 Invalid work payload`
-- `404 Work not found`
+```json
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "Work updated",
+  "data": {
+    "id": 1,
+    "image_url": "https://...",
+    "title": "Updated title",
+    "subtitle": "Project subtitle",
+    "description": "Project description"
+  }
+}
+```
 
-## Notes
+DELETE /api/works/:id (admin only)
 
-- For multipart requests, keep `data` as valid JSON string.
-- Do not manually set `Content-Type` in Postman for form-data; Postman sets it automatically.
-- Current `npm run dev` uses `ts-node` without watch mode. Restart server after code changes.
+Success response:
+
+```json
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "Work deleted",
+  "data": null
+}
+```
+
+## Validation Rules
+
+- Login:
+  - email must be valid email
+  - password minimum 6 characters
+- Create work:
+  - title, subtitle, description required (non-empty strings)
+- Update work:
+  - title, subtitle, description optional
+- For create/update route body:
+  - data must be a valid JSON string
+- Path id:
+  - must be a positive integer
+
+## Error Response Behavior
+
+Global error handler returns:
+
+```json
+{
+  "success": false,
+  "message": "Something went wrong!",
+  "error": {}
+}
+```
+
+Possible messages include:
+
+- No token provided (401)
+- Invalid token (401)
+- Forbidden (403)
+- User not found (401)
+- Incorrect password (401)
+- No file uploaded (400)
+- Validation error (400)
+- Too many login attempts, please try again later. (429)
+- Too many requests from this IP, please try again later. (429)
+- API NOT FOUND! (404)
+
+Important implementation note:
+
+- Some not-found conditions in work service currently throw generic Error("Work not found"), which is returned as 500 by the current global error handling logic.
+
+## Postman Tips
+
+1. Login first using POST /api/auth/login.
+2. Reuse cookie automatically in Postman, or use Authorization: Bearer <token>.
+3. For multipart requests, send data as valid JSON string.
+4. Do not manually set multipart Content-Type; Postman will set it with boundary.
+
+## Current Limitations
+
+- No automated tests yet.
+- No refresh token flow.
+- In-memory rate limiter resets on server restart and is not shared across instances.
+- Cloudinary deletion failures in safe cleanup are intentionally swallowed during rollback cleanup paths.

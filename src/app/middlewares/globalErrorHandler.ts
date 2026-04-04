@@ -11,25 +11,33 @@ const globalErrorHandler = (
   res: Response,
   next: NextFunction
 ) => {
+  const isDevelopment = process.env.NODE_ENV === "development";
   console.error(err);
 
   let statusCode: number = err.statusCode || httpStatus.INTERNAL_SERVER_ERROR;
   let success = false;
   let message: string = err.message || "Something went wrong!";
-  let error: any = err;
+  let error: any = isDevelopment ? err : undefined;
 
   if (err instanceof ZodError) {
     statusCode = httpStatus.BAD_REQUEST;
     message = "Validation error";
-    error = err.issues;
+    error = err.issues.map((issue) => ({
+      path: issue.path,
+      message: issue.message,
+    }));
   }
  
-
-  return res.status(statusCode).json({
+  const payload: Record<string, unknown> = {
     success,
     message,
-    error,
-  });
+  };
+
+  if (error !== undefined) {
+    payload.error = error;
+  }
+
+  return res.status(statusCode).json(payload);
 };
 
 export default globalErrorHandler;

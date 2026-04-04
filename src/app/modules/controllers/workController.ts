@@ -48,7 +48,7 @@ export const uploadWorkController = catchAsync(async (req: Request, res: Respons
     });
 });
 
-export const updateWorkController = catchAsync(async (req: any, res: Response) => {
+export const updateWorkController = catchAsync(async (req: Request, res: Response) => {
     const { id } = idSchema.parse(req.params);
     const parsed = parseUpdateWorkData(req.body.data);
 

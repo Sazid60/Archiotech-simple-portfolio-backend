@@ -10,17 +10,8 @@ const start = async () => {
     let server: Server;
 
     try {
-        try {
-            await initDb();
-            await seedAdmin();
-        } catch (err: any) {
-            console.error("Startup initialization failed:", {
-                message: err?.message || "Unknown error",
-                code: err?.code,
-                host: process.env.DB_HOST,
-                port: process.env.DB_PORT || 3306,
-            });
-        }
+        await initDb();
+        await seedAdmin();
 
         const PORT = process.env.PORT || 5000;
         server = app.listen(PORT, () => {
@@ -63,8 +54,6 @@ const start = async () => {
         console.error("Startup failed:", {
             message: err?.message || "Unknown error",
             code: err?.code,
-            host: process.env.DB_HOST,
-            port: process.env.DB_PORT || 3306,
         });
         process.exit(1);
     }
